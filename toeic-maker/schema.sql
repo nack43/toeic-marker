@@ -1,7 +1,7 @@
 -- user table
 create table
 if not exists user (
-  user_id integer primary key,
+  user_id integer primary key autoincrement,
   user_name text not null
 );
 
