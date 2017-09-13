@@ -1,4 +1,4 @@
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 import sqlite3
 
 app = Flask(__name__)
@@ -6,7 +6,7 @@ app = Flask(__name__)
 DATABASE = '/tmp/toeic-maker.db'
 
 # initialize database from schema.sql (sql_script)
-#@app.route('/create_db')
+@app.route('/create_db')
 def init_db():
     conn = sqlite3.connect(DATABASE)
     # open db schema file
@@ -21,13 +21,22 @@ def user_add_form():
     return render_template('user_add.html')
 
 
-@app.route('/user_add', methods=['GET', 'POST'])
-def user_add():
-    """
-    User registration process
-    """
+@app.route('/user_create', methods=['POST'])
+def user_create():
+    
+    if request.method == 'POST':
+        conn = sqlite3.connect(DATABASE)
+        conn.cursor().execute("INSERT INTO user(first_name, last_name, password) VALUES (?, ?, ?)", 
+            (
+                request.form['first_name'],
+                request.form['last_name'],
+                request.form['password']
+                ))
+        conn.commit()
+        conn.close()
+        return 'User create successfully'
 
-    return 'PASS'
+    return 'User create failed'
 
 
 

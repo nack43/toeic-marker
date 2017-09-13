@@ -1,8 +1,11 @@
+-- drop table if exists user;
 -- user table
 create table
 if not exists user (
   user_id integer primary key autoincrement,
-  user_name text not null
+  first_name text not null,
+  last_name text not null,
+  password text not null
 );
 
 -- exam table 

@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
   <body>
-    <form action="{{ url_for('user_add') }}" method="POST">
-      <input name="fullname" placeholder="Full Name">
+    <form action="{{ url_for('user_create') }}" method="POST">
+      <p><input name="first_name" placeholder="FIRST NAME"></p>
+      <p><input name="last_name" placeholder="LAST NAME"></p>
+      <p><input name="password" placeholder="PASSWORD"></p>
       <input type="submit" value="Submit">
     </form>
   </body>
