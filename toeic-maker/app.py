@@ -23,13 +23,12 @@ def user_add_form():
 
 @app.route('/user_create', methods=['POST'])
 def user_create():
-    
+
     if request.method == 'POST':
         conn = sqlite3.connect(DATABASE)
-        conn.cursor().execute("INSERT INTO user(first_name, last_name, password) VALUES (?, ?, ?)", 
+        conn.cursor().execute("INSERT INTO user(user_name, password) VALUES (?, ?)", 
             (
-                request.form['first_name'],
-                request.form['last_name'],
+                request.form['user_name'],
                 request.form['password']
                 ))
         conn.commit()
@@ -39,6 +38,35 @@ def user_create():
     return 'User create failed'
 
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+
+    if request.method == 'POST':
+        user_name = request.form['user_name']
+        password = request.form['password']
+
+        conn = sqlite3.connect(DATABASE)
+        completion = False
+        with conn:
+            cur = conn.cursor()
+            rv = cur.execute("SELECT user_name, password FROM user WHERE user_name = ? AND password = ?;",
+                (
+                    user_name,
+                    password
+                ))
+
+            if rv.fetchone() is not None:
+                completion = True
+
+    if completion:
+        return 'Login successfully'
+    else:
+        return 'Login failed'
+
+
+@app.route('/login_form')
+def login_form():
+    return render_template('login.html')
 
 
 if __name__ == '__main__':

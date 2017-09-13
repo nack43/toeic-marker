@@ -1,10 +1,9 @@
--- drop table if exists user;
+drop table if exists user;
 -- user table
 create table
 if not exists user (
   user_id integer primary key autoincrement,
-  first_name text not null,
-  last_name text not null,
+  user_name text not null,
   password text not null
 );
 
