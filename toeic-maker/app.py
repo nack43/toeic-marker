@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request
 import sqlite3
+import bcrypt
 
 app = Flask(__name__)
 
@@ -26,10 +27,14 @@ def user_create():
 
     if request.method == 'POST':
         conn = sqlite3.connect(DATABASE)
+
+        # password hashing
+        hashed_pass = bcrypt.hashpw(request.form['password'].encode('utf-8'), bcrypt.gensalt())
+        
         conn.cursor().execute("INSERT INTO user(user_name, password) VALUES (?, ?)", 
             (
                 request.form['user_name'],
-                request.form['password']
+                hashed_pass
                 ))
         conn.commit()
         conn.close()
@@ -49,13 +54,18 @@ def login():
         completion = False
         with conn:
             cur = conn.cursor()
-            rv = cur.execute("SELECT user_name, password FROM user WHERE user_name = ? AND password = ?;",
+
+            # search provided user
+            rv = cur.execute("SELECT user_name, password FROM user WHERE user_name = ?;",
                 (
                     user_name,
-                    password
                 ))
 
-            if rv.fetchone() is not None:
+            # fetch target user's password (hashed)
+            db_hashed_pass = rv.fetchone()[1]
+
+            # compare provided password and hashed password in DB
+            if bcrypt.checkpw(password.encode('utf-8'), db_hashed_pass):
                 completion = True
 
     if completion:
