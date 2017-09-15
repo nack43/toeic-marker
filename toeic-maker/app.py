@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, g
 import sqlite3
 import bcrypt
 
@@ -7,7 +7,7 @@ app = Flask(__name__)
 DATABASE = '/tmp/toeic-maker.db'
 
 # initialize database from schema.sql (sql_script)
-@app.route('/create_db')
+#@app.route('/create_db')
 def init_db():
     conn = sqlite3.connect(DATABASE)
     # open db schema file
@@ -15,6 +15,25 @@ def init_db():
         conn.cursor().executescript(f.read())
     conn.commit()
     conn.close()
+
+
+def connect_db():
+    rv = sqlite3.connect(DATABASE)
+    rv.row_factory = sqlite3.Row
+
+    return rv
+
+
+def get_db():
+    if not hasattr(g, 'sqlite_db'):
+        g.sqlite_db = connect_db()
+    return g.sqlite_db
+
+
+@app.teardown_appcontext
+def close_db(error):
+    if hasattr(g, 'sqlite_db'):
+        g.sqlite_db.close()
 
 
 @app.route('/user_add_form')
@@ -26,18 +45,19 @@ def user_add_form():
 def user_create():
 
     if request.method == 'POST':
-        conn = sqlite3.connect(DATABASE)
+        db = get_db()
+        # conn = sqlite3.connect(DATABASE)
 
         # password hashing
         hashed_pass = bcrypt.hashpw(request.form['password'].encode('utf-8'), bcrypt.gensalt())
         
-        conn.cursor().execute("INSERT INTO user(user_name, password) VALUES (?, ?)", 
+        db.cursor().execute("INSERT INTO user(user_name, password) VALUES (?, ?)", 
             (
                 request.form['user_name'],
                 hashed_pass
                 ))
-        conn.commit()
-        conn.close()
+        db.commit()
+        db.close()
         return 'User create successfully'
 
     return 'User create failed'
@@ -50,23 +70,23 @@ def login():
         user_name = request.form['user_name']
         password = request.form['password']
 
-        conn = sqlite3.connect(DATABASE)
+        db = get_db()
+
         completion = False
-        with conn:
-            cur = conn.cursor()
 
-            # search provided user
-            rv = cur.execute("SELECT user_name, password FROM user WHERE user_name = ?;",
-                (
-                    user_name,
-                ))
+        # search provided user
+        rv = db.cursor().execute("SELECT user_name, password FROM user WHERE user_name = ?;",
+            (
+                user_name,
+            ))
 
-            # fetch target user's password (hashed)
-            db_hashed_pass = rv.fetchone()[1]
+        # fetch target user's password (hashed)
+        db_hashed_pass = rv.fetchone()[1]
+        print(db_hashed_pass)
 
-            # compare provided password and hashed password in DB
-            if bcrypt.checkpw(password.encode('utf-8'), db_hashed_pass):
-                completion = True
+        # compare provided password and hashed password in DB
+        if bcrypt.checkpw(password.encode('utf-8'), db_hashed_pass):
+            completion = True
 
     if completion:
         return 'Login successfully'
