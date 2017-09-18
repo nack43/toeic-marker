@@ -7,7 +7,7 @@
     <form method="POST">
       {% for problem in problems %}
         <p>No.{{problem[1]}}
-        <select name="answer">
+        <select name={{problem[1]}}>
           <option value="a">A</option>
           <option value="b">B</option>
           <option value="c">C</option>
