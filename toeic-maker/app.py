@@ -27,6 +27,7 @@ def connect_db():
 def get_db():
     if not hasattr(g, 'sqlite_db'):
         g.sqlite_db = connect_db()
+
     return g.sqlite_db
 
 
@@ -82,7 +83,6 @@ def login():
 
         # fetch target user's password (hashed)
         db_hashed_pass = rv.fetchone()[1]
-        print(db_hashed_pass)
 
         # compare provided password and hashed password in DB
         if bcrypt.checkpw(password.encode('utf-8'), db_hashed_pass):
@@ -97,6 +97,36 @@ def login():
 @app.route('/login_form')
 def login_form():
     return render_template('login.html')
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+# render answer form
+@app.route('/answer_form/<int:exam_id>')
+def answer_form(exam_id):
+    db = get_db()
+
+    problems = []
+    # part1 to 7
+    for i in range(1, 8):
+        rv = db.cursor().execute('SELECT part_id, problem_id FROM problem WHERE exam_id=? AND part_id=?;',
+            (
+                exam_id,
+                i
+            ))
+
+        for r in rv:
+            # (part_id, problem_id)
+            tmp = (r[0], r[1])
+            # [(part_id, problem_id), ...]
+            problems.append(tmp)
+
+    db.close()
+
+    return render_template('answer_form.html', problems=problems)
 
 
 if __name__ == '__main__':

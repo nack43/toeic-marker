@@ -10,7 +10,7 @@ if not exists user (
 -- exam table 
 create table
 if not exists exam (
-  exam_id integer primary key,
+  exam_id integer primary key autoincrement,
   exam_name text not null
 );
 
