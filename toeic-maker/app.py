@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, g
 import sqlite3
 import bcrypt
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -126,7 +127,55 @@ def answer_form(exam_id):
 
     db.close()
 
-    return render_template('answer_form.html', problems=problems)
+    return render_template('answer_form.html', problems=problems, exam_id=exam_id)
+
+
+@app.route('/save_user_answer', methods=['POST'])
+def save_user_answer():
+    """
+     exam_date table
+     exam_date_id
+     exam_id
+     user_id
+     exam_date
+    """
+    # TODO_1: how to get user_id
+    # TODO_2: how to get exam_id
+
+    db = get_db()
+    
+    db.cursor().execute('INSERT INTO exam_date(exam_id, user_id, exam_date) VALUES (?, ?, ?);', 
+        (
+            #TODO_1
+            #TODO_2
+            # exam_date
+            datetime.now().strftime('%Y%m%d%H%M%S')
+        ))
+    db.commit()
+    db.close()
+    
+    """
+    user_answer table
+    exam_date_id
+    problem_id
+    user_answer
+    """
+    # TODO_3: how to get exam_date_id
+    # problem_id and user_answer
+    for i in range(1,201):
+        db.cursor().execute('INSERT INTO user_answer() VALUES (?, ?, ?)', 
+            (
+                #TODO_3
+                i,
+                request.form[str(i)]
+            ))
+        db.commit()
+        db.close()
+
+    return
+
+
+    
 
 
 if __name__ == '__main__':

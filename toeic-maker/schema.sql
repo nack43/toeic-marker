@@ -37,9 +37,10 @@ if not exists problem (
 create table
 if not exists exam_date (
   exam_date_id integer primary key autoincrement,
-  exam_id integer unique,
-  user_id integer unique,
-  exam_date text unique,
+  exam_id integer,
+  user_id integer,
+  exam_date text,
+  unique(exam_id, user_id, exam_date),
   foreign key(exam_id) references exam(exam_id),
   foreign key(user_id) references user(user_id)
 );
