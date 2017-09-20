@@ -1,9 +1,11 @@
-from flask import Flask, render_template, request, g
+from flask import Flask, render_template, request, g, session
+import os
 import sqlite3
 import bcrypt
 from datetime import datetime
 
 app = Flask(__name__)
+app.secret_key = os.urandom(24)
 
 DATABASE = '/tmp/toeic-maker.db'
 
@@ -69,7 +71,8 @@ def user_create():
 def login():
 
     if request.method == 'POST':
-        user_name = request.form['user_name']
+
+        session['user_name'] = request.form['user_name']
         password = request.form['password']
 
         db = get_db()
@@ -77,13 +80,15 @@ def login():
         completion = False
 
         # search provided user
-        rv = db.cursor().execute("SELECT user_name, password FROM user WHERE user_name = ?;",
+        rv = db.cursor().execute("SELECT password, user_id FROM user WHERE user_name = ?;",
             (
-                user_name,
+                session['user_name'],
             ))
 
-        # fetch target user's password (hashed)
-        db_hashed_pass = rv.fetchone()[1]
+        for r in rv:
+            # fetch target user's password (hashed)
+            db_hashed_pass = r[0]
+            session['user_id'] = r[1]
 
         # compare provided password and hashed password in DB
         if bcrypt.checkpw(password.encode('utf-8'), db_hashed_pass):
@@ -109,6 +114,8 @@ def index():
 @app.route('/answer_form/<int:exam_id>')
 def answer_form(exam_id):
     db = get_db()
+
+    session['exam_id'] = exam_id
 
     problems = []
     # part1 to 7
@@ -139,27 +146,25 @@ def save_user_answer():
      user_id
      exam_date
     """
-    # TODO_1: how to get user_id
-    # TODO_2: how to get exam_id
-
     db = get_db()
     
     db.cursor().execute('INSERT INTO exam_date(exam_id, user_id, exam_date) VALUES (?, ?, ?);', 
         (
-            #TODO_1
-            #TODO_2
+            session['user_id'],
+            session['exam_id'],
             # exam_date
             datetime.now().strftime('%Y%m%d%H%M%S')
         ))
     db.commit()
     db.close()
-    
+
     """
     user_answer table
     exam_date_id
     problem_id
     user_answer
     """
+
     # TODO_3: how to get exam_date_id
     # problem_id and user_answer
     for i in range(1,201):
@@ -173,9 +178,6 @@ def save_user_answer():
         db.close()
 
     return
-
-
-    
 
 
 if __name__ == '__main__':
