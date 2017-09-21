@@ -93,6 +93,7 @@ def login():
         # compare provided password and hashed password in DB
         if bcrypt.checkpw(password.encode('utf-8'), db_hashed_pass):
             completion = True
+        print(session['user_id'])
 
     if completion:
         return 'Login successfully'
@@ -139,45 +140,39 @@ def answer_form(exam_id):
 
 @app.route('/save_user_answer', methods=['POST'])
 def save_user_answer():
-    """
-     exam_date table
-     exam_date_id
-     exam_id
-     user_id
-     exam_date
-    """
-    db = get_db()
     
-    db.cursor().execute('INSERT INTO exam_date(exam_id, user_id, exam_date) VALUES (?, ?, ?);', 
-        (
-            session['user_id'],
-            session['exam_id'],
-            # exam_date
-            datetime.now().strftime('%Y%m%d%H%M%S')
-        ))
-    db.commit()
-    db.close()
+    try:
+        db = get_db()
 
-    """
-    user_answer table
-    exam_date_id
-    problem_id
-    user_answer
-    """
-
-    # TODO_3: how to get exam_date_id
-    # problem_id and user_answer
-    for i in range(1,201):
-        db.cursor().execute('INSERT INTO user_answer() VALUES (?, ?, ?)', 
+        cur = db.cursor()
+        cur.execute('BEGIN;')
+        cur.execute('INSERT INTO exam_date(exam_id, user_id, exam_date) VALUES (?, ?, ?);', 
             (
-                #TODO_3
-                i,
-                request.form[str(i)]
-            ))
+                session['user_id'],
+                session['exam_id'],
+                # exam_date
+                datetime.now().strftime('%Y%m%d%H%M%S')
+             ))
+
+        lastrowid = cur.lastrowid
+
+        # iterate 1 to 200 for problem counts
+        for i in range(1,201):
+            cur.execute('INSERT INTO user_answer(exam_date_id, problem_id, user_answer) VALUES (?, ?, ?)', 
+                (
+                    lastrowid,            # exam_date_id
+                    i,                    # problem_id
+                    request.form[str(i)]  # user_answer
+                ))
+
         db.commit()
         db.close()
 
-    return
+    except sqlite3.Error as e:
+        print(e) # エラー
+        db.rollback()
+        db.close()
+
 
 
 if __name__ == '__main__':
