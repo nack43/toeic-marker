@@ -140,7 +140,7 @@ def answer_form(exam_id):
 
 @app.route('/save_user_answer', methods=['POST'])
 def save_user_answer():
-    
+
     try:
         db = get_db()
 
@@ -173,6 +173,11 @@ def save_user_answer():
         db.rollback()
         db.close()
 
+
+@app.route('/logout')
+def logout():
+    print(session['user_name'])
+    session.pop('user_name', None)
 
 
 if __name__ == '__main__':
