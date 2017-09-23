@@ -213,10 +213,10 @@ def show_result(lastrowid):
 
     t_ratio = t_corrects / 200 * 100
 
-    tmp = 0
+    tmp_count = 0
     for correct, count in zip(p_corrects.items(), p_counts.items()):
-        tmp += 1
-        p_ratio[tmp] = round(correct[1] / count[1], 2) * 100
+        tmp_count += 1
+        p_ratio[tmp_count] = round(correct[1] / count[1], 2) * 100
 
     db.close()
     return render_template('result.html', t_ratio=t_ratio, p_ratio=p_ratio, wrong_problems=wrong_problems)
