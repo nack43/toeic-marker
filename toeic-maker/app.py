@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, g, session
+from flask import Flask, render_template, request, g, session, redirect, url_for
 import os
 import sqlite3
 import bcrypt
@@ -176,8 +176,8 @@ def save_user_answer():
 
 @app.route('/logout')
 def logout():
-    print(session['user_name'])
     session.pop('user_name', None)
+    return redirect(url_for('login_form'))
 
 
 if __name__ == '__main__':
