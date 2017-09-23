@@ -5,6 +5,7 @@
   </head>
   <body>
     <form action="{{ url_for('save_user_answer') }}" method="POST">
+      <input type="submit" value="Submit">
       {% for problem in problems %}
         <p>No.{{problem[1]}}
         <select name={{problem[1]}}>
@@ -15,7 +16,6 @@
          </select>
         </p>
       {% endfor %}
-      <input type="submit" value="Submit">
     </form>
   </body>
 </html>

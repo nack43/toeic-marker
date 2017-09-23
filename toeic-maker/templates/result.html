@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Result</title>
+  </head>
+  <body>
+    <p>全体正答率: {{t_ratio}}</p>
+    {% for k, v in p_ratio.items() %}
+    <p>パート{{k}}: {{v}} %</p>
+    {% endfor %}
+    <p>間違った問題(リスト): {{wrong_problems}}</p>
+  </body>
+</html>

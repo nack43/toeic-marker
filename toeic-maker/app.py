@@ -96,7 +96,8 @@ def login():
         print(session['user_id'])
 
     if completion:
-        return 'Login successfully'
+        # TODO: always pass 1 for test
+        return redirect(url_for('answer_form', exam_id=1))
     else:
         return 'Login failed'
 
@@ -168,10 +169,57 @@ def save_user_answer():
         db.commit()
         db.close()
 
+        return redirect(url_for('show_result', lastrowid=lastrowid))
+
     except sqlite3.Error as e:
         print(e) # エラー
         db.rollback()
         db.close()
+
+
+@app.route('/result/<int:lastrowid>')
+def show_result(lastrowid):
+    t_corrects = 0
+    p_corrects = {}
+    p_counts = {}
+    t_ratio = 0
+    p_ratio = {}        # float
+    wrong_problems = [] # int
+
+    db = get_db()
+    cur = db.cursor()
+
+    rv = cur.execute('SELECT ua.problem_id, p.part_id, ua.user_answer, p.correct_answer FROM user_answer ua INNER JOIN exam_date ed ON ua.exam_date_id = ed.exam_date_id INNER JOIN problem p ON p.problem_id = ua.problem_id AND p.exam_id = ed.exam_id WHERE ua.exam_date_id = ?;', (lastrowid,))
+    
+    for r in rv:
+        # comparing user answer and correct answer
+        if r[2] == r[3]:
+            t_corrects += 1
+
+            # counting correct answer for each part
+            if r[1] in p_corrects.keys():
+                p_corrects[r[1]] += 1
+            else:
+                p_corrects[r[1]] = 1
+        else:
+            # listing wrong problems
+            wrong_problems.append(r[0])
+
+        # counting number of part of problems
+        if r[1] in p_counts.keys():
+            p_counts[r[1]] += 1
+        else:
+            p_counts[r[1]] = 1
+
+    t_ratio = t_corrects / 200 * 100
+
+    tmp = 0
+    for correct, count in zip(p_corrects.items(), p_counts.items()):
+        tmp += 1
+        p_ratio[tmp] = round(correct[1] / count[1], 2) * 100
+
+    db.close()
+    return render_template('result.html', t_ratio=t_ratio, p_ratio=p_ratio, wrong_problems=wrong_problems)
 
 
 @app.route('/logout')
