@@ -93,10 +93,10 @@ def login():
         # compare provided password and hashed password in DB
         if bcrypt.checkpw(password.encode('utf-8'), db_hashed_pass):
             completion = True
-        print(session['user_id'])
 
     if completion:
         # TODO: always pass 1 for test
+
         return redirect(url_for('answer_form', exam_id=1))
     else:
         return 'Login failed'
@@ -136,45 +136,53 @@ def answer_form(exam_id):
 
     db.close()
 
-    return render_template('answer_form.html', problems=problems, exam_id=exam_id)
+    # for csrf
+    session['csrf_hash'] = str(os.urandom(24))
+    print('SESSION {} {}'.format(type(session['csrf_hash']), session['csrf_hash']))
+
+    return render_template('answer_form.html', problems=problems, exam_id=exam_id, csrf_hash=session['csrf_hash'])
 
 
-@app.route('/save_user_answer', methods=['POST'])
+@app.route('/save_user_answer', methods=['GET', 'POST'])
 def save_user_answer():
+    
+    # check request is legal or not
+    if session['csrf_hash'] == request.form['csrf_hash']:
+        session.pop('csrf_hash', None)
+        
+        try:
+            db = get_db()
 
-    try:
-        db = get_db()
-
-        cur = db.cursor()
-        cur.execute('BEGIN;')
-        cur.execute('INSERT INTO exam_date(exam_id, user_id, exam_date) VALUES (?, ?, ?);', 
-            (
-                session['user_id'],
-                session['exam_id'],
-                # exam_date
-                datetime.now().strftime('%Y%m%d%H%M%S')
-             ))
-
-        lastrowid = cur.lastrowid
-
-        # iterate 1 to 200 for problem counts
-        for i in range(1,201):
-            cur.execute('INSERT INTO user_answer(exam_date_id, problem_id, user_answer) VALUES (?, ?, ?)', 
+            cur = db.cursor()
+            cur.execute('BEGIN;')
+            cur.execute('INSERT INTO exam_date(exam_id, user_id, exam_date) VALUES (?, ?, ?);', 
                 (
-                    lastrowid,            # exam_date_id
-                    i,                    # problem_id
-                    request.form[str(i)]  # user_answer
-                ))
+                    session['user_id'],
+                    session['exam_id'],
+                    # exam_date
+                    datetime.now().strftime('%Y%m%d%H%M%S')
+                 ))
 
-        db.commit()
-        db.close()
+            lastrowid = cur.lastrowid
 
-        return redirect(url_for('show_result', lastrowid=lastrowid))
+            # iterate 1 to 200 for problem counts
+            for i in range(1,201):
+                cur.execute('INSERT INTO user_answer(exam_date_id, problem_id, user_answer) VALUES (?, ?, ?)', 
+                    (
+                        lastrowid,            # exam_date_id
+                        i,                    # problem_id
+                        request.form[str(i)]  # user_answer
+                    ))
 
-    except sqlite3.Error as e:
-        print(e) # エラー
-        db.rollback()
-        db.close()
+            db.commit()
+            db.close()
+
+            return redirect(url_for('show_result', lastrowid=lastrowid))
+
+        except sqlite3.Error as e:
+            print(e) # エラー
+            db.rollback()
+            db.close()
 
 
 @app.route('/result/<int:lastrowid>')
