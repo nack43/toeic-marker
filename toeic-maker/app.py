@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, g, session, redirect, url_for
+from flask import Flask, render_template, request, g, session, redirect, url_for, abort
 import os
 import sqlite3
 import bcrypt
@@ -137,52 +137,56 @@ def answer_form(exam_id):
     db.close()
 
     # for csrf
-    session['csrf_hash'] = str(os.urandom(24))
-    print('SESSION {} {}'.format(type(session['csrf_hash']), session['csrf_hash']))
+    #session['csrf_hash'] = str(os.urandom(24))
 
-    return render_template('answer_form.html', problems=problems, exam_id=exam_id, csrf_hash=session['csrf_hash'])
+    
+    #print('SESSION {} {}'.format(type(session['csrf_hash']), session['csrf_hash']))
+
+    #return render_template('answer_form.html', problems=problems, exam_id=exam_id, csrf_hash=session['csrf_hash'])
+    return render_template('answer_form.html', problems=problems, exam_id=exam_id)
+
 
 
 @app.route('/save_user_answer', methods=['GET', 'POST'])
 def save_user_answer():
-    
+
     # check request is legal or not
-    if session['csrf_hash'] == request.form['csrf_hash']:
-        session.pop('csrf_hash', None)
-        
-        try:
-            db = get_db()
+    #if session['csrf_hash'] == request.form['csrf_hash']:
+     #   session.pop('csrf_hash', None)
 
-            cur = db.cursor()
-            cur.execute('BEGIN;')
-            cur.execute('INSERT INTO exam_date(exam_id, user_id, exam_date) VALUES (?, ?, ?);', 
+    try:
+        db = get_db()
+
+        cur = db.cursor()
+        cur.execute('BEGIN;')
+        cur.execute('INSERT INTO exam_date(exam_id, user_id, exam_date) VALUES (?, ?, ?);', 
+            (
+                session['user_id'],
+                session['exam_id'],
+                # exam_date
+                datetime.now().strftime('%Y%m%d%H%M%S')
+             ))
+
+        lastrowid = cur.lastrowid
+
+        # iterate 1 to 200 for problem counts
+        for i in range(1,201):
+            cur.execute('INSERT INTO user_answer(exam_date_id, problem_id, user_answer) VALUES (?, ?, ?)', 
                 (
-                    session['user_id'],
-                    session['exam_id'],
-                    # exam_date
-                    datetime.now().strftime('%Y%m%d%H%M%S')
-                 ))
+                    lastrowid,            # exam_date_id
+                    i,                    # problem_id
+                    request.form[str(i)]  # user_answer
+                ))
 
-            lastrowid = cur.lastrowid
+        db.commit()
+        db.close()
 
-            # iterate 1 to 200 for problem counts
-            for i in range(1,201):
-                cur.execute('INSERT INTO user_answer(exam_date_id, problem_id, user_answer) VALUES (?, ?, ?)', 
-                    (
-                        lastrowid,            # exam_date_id
-                        i,                    # problem_id
-                        request.form[str(i)]  # user_answer
-                    ))
+        return redirect(url_for('show_result', lastrowid=lastrowid))
 
-            db.commit()
-            db.close()
-
-            return redirect(url_for('show_result', lastrowid=lastrowid))
-
-        except sqlite3.Error as e:
-            print(e) # エラー
-            db.rollback()
-            db.close()
+    except sqlite3.Error as e:
+        print(e) # エラー
+        db.rollback()
+        db.close()
 
 
 @app.route('/result/<int:lastrowid>')
@@ -235,6 +239,25 @@ def logout():
     session.pop('user_name', None)
     return redirect(url_for('login_form'))
 
+
+@app.before_request
+def csrf_protect():
+
+    if request.method == 'POST':
+        token = session.pop('_csrf_token', None)
+
+        if not token or token != request.form.get('_csrf_token'):
+            abort(403)
+
+
+def generate_csrf_token():
+
+    if '_csrf_token' not in session:
+        session['_csrf_token'] = os.urandom(24)
+        
+        return session['_csrf_token']
+
+app.jinja_env.globals['csrf_token'] = generate_csrf_token
 
 if __name__ == '__main__':
     app.run(debug=True)

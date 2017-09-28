@@ -6,8 +6,7 @@
   <body>
     <form action="{{ url_for('save_user_answer') }}" method="POST">
       <input type="submit" value="Submit">
-      <p>{{csrf_hash}}<p>
-      <input type="hidden" name='csrf_hash' value={{csrf_hash}}>
+      <input type="hidden" name='csrf_hash' value={{csrf_token()}}>
       {% for problem in problems %}
         <p>No.{{problem[1]}}
         <select name={{problem[1]}}>
