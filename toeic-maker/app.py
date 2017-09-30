@@ -40,31 +40,45 @@ def close_db(error):
         g.sqlite_db.close()
 
 
-@app.route('/user_add_form')
-def user_add_form():
-    return render_template('user_add.html')
+@app.route('/users/sign_up', methods=['GET', 'POST'])
+def sign_up():
 
+    if request.method == 'GET':
+        return render_template('sign_up.html')
 
-@app.route('/user_create', methods=['POST'])
-def user_create():
+    elif request.method == 'POST':
+        try:
+            print('POSTきたー')
+            db = get_db()
 
-    if request.method == 'POST':
-        db = get_db()
-        # conn = sqlite3.connect(DATABASE)
+            user = db.cursor().execute('SELECT email_address FROM user WHERE email_address=?', (request.form['email_address'],))
+            
+            #print(user.fetchone())
 
-        # password hashing
-        hashed_pass = bcrypt.hashpw(request.form['password'].encode('utf-8'), bcrypt.gensalt())
-        
-        db.cursor().execute("INSERT INTO user(user_name, password) VALUES (?, ?)", 
-            (
-                request.form['user_name'],
-                hashed_pass
-                ))
-        db.commit()
-        db.close()
-        return 'User create successfully'
+            if user is not None:
+                # password hashing
+                hashed_pass = bcrypt.hashpw(request.form['password'].encode('utf-8'), bcrypt.gensalt())
 
-    return 'User create failed'
+                # registering new user
+                db.cursor().execute("INSERT INTO user(email_address, password) VALUES (?, ?)", 
+                    (
+                        request.form['email_address'],
+                        hashed_pass
+                    ))
+
+                db.commit()
+                db.close()
+                return 'User create successfully'
+
+            else:
+                print('THE MAIL ADDRESS ALREADY EXSISTS')
+                db.close()
+                return 'User create failed'
+
+        except sqlite3.Error as e:
+            print(e) # エラー
+            db.close()
+
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -253,11 +267,14 @@ def csrf_protect():
 def generate_csrf_token():
 
     if '_csrf_token' not in session:
-        session['_csrf_token'] = os.urandom(24)
-        
-        return session['_csrf_token']
+        session['_csrf_token'] = str(os.urandom(24))
+
+    return session['_csrf_token']
+
 
 app.jinja_env.globals['csrf_token'] = generate_csrf_token
 
+
 if __name__ == '__main__':
     app.run(debug=True)
+
