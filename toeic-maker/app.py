@@ -80,45 +80,48 @@ def sign_up():
             db.close()
 
 
+@app.route('/users/sign_in', methods=['GET', 'POST'])
+def sign_in():
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
+    if request.method == 'GET':
+        return render_template('sign_in.html')
 
-    if request.method == 'POST':
-
-        session['user_name'] = request.form['user_name']
-        password = request.form['password']
+    elif request.method == 'POST':
+        is_auth = False
 
         db = get_db()
 
-        completion = False
-
         # search provided user
-        rv = db.cursor().execute("SELECT password, user_id FROM user WHERE user_name = ?;",
+        user = db.cursor().execute("SELECT user_id, password FROM user WHERE email_address=?",
             (
-                session['user_name'],
+                request.form['email_address'],
             ))
 
-        for r in rv:
-            # fetch target user's password (hashed)
-            db_hashed_pass = r[0]
-            session['user_id'] = r[1]
+        db.close()
 
-        # compare provided password and hashed password in DB
-        if bcrypt.checkpw(password.encode('utf-8'), db_hashed_pass):
-            completion = True
+        if user is not None:
+            user_data = tuple(user.fetchone())
 
-    if completion:
-        # TODO: always pass 1 for test
+            db_user_id = user_data[0]
+            db_hashed_pass = user_data[1]
 
+            # password comparison
+            if bcrypt.checkpw(request.form['password'].encode('utf-8'), db_hashed_pass):
+                session['user_id'] = db_user_id
+                session['email_address'] = request.form['email_address']
+                is_auth = True
+
+            else:
+                return 'the password is wrong'
+
+        else:
+            return 'There is no user like that'
+
+    if is_auth:
+        # TODO: redirect mypage
         return redirect(url_for('answer_form', exam_id=1))
     else:
-        return 'Login failed'
-
-
-@app.route('/login_form')
-def login_form():
-    return render_template('login.html')
+        return 'Login failed'        
 
 
 @app.route('/')

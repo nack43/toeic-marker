@@ -2,11 +2,11 @@
 <html>
   <body>
     <p>Sign INやで</p>
-    <form action="{{ url_for('sign_up') }}" method='POST'>
+    <form action="{{ url_for('sign_in') }}" method='POST'>
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
       <p><input name="email_address" placeholder="EMAIL ADDRESS"></p>
       <p><input name="password" placeholder="PASSWORD"></p>
-      <input type="submit" value='Sign up'>
+      <input type="submit" value='Sign in'>
     </form>
   </body>
 </html>
