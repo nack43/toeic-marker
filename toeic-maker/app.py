@@ -129,19 +129,17 @@ def index():
     return render_template('index.html')
 
 
-# render answer form
-@app.route('/answer_form/<int:exam_id>')
-def answer_form(exam_id):
+@app.route('/exam/answer_form', methods=['POST'])
+def show_exam_form():
     db = get_db()
-
-    session['exam_id'] = exam_id
+    session['exam_id'] = request.form['exam_id']
 
     problems = []
     # part1 to 7
     for i in range(1, 8):
         rv = db.cursor().execute('SELECT part_id, problem_id FROM problem WHERE exam_id=? AND part_id=?;',
             (
-                exam_id,
+                session['exam_id'],
                 i
             ))
 
@@ -153,15 +151,9 @@ def answer_form(exam_id):
 
     db.close()
 
-    # for csrf
-    #session['csrf_hash'] = str(os.urandom(24))
+    print(session['exam_id'])
 
-    
-    #print('SESSION {} {}'.format(type(session['csrf_hash']), session['csrf_hash']))
-
-    #return render_template('answer_form.html', problems=problems, exam_id=exam_id, csrf_hash=session['csrf_hash'])
-    return render_template('answer_form.html', problems=problems, exam_id=exam_id)
-
+    return render_template('answer_form.html', problems=problems, exam_id=session['exam_id'])
 
 
 @app.route('/save_user_answer', methods=['GET', 'POST'])
@@ -219,7 +211,7 @@ def show_result(lastrowid):
     cur = db.cursor()
 
     rv = cur.execute('SELECT ua.problem_id, p.part_id, ua.user_answer, p.correct_answer FROM user_answer ua INNER JOIN exam_date ed ON ua.exam_date_id = ed.exam_date_id INNER JOIN problem p ON p.problem_id = ua.problem_id AND p.exam_id = ed.exam_id WHERE ua.exam_date_id = ?;', (lastrowid,))
-    
+
     for r in rv:
         # comparing user answer and correct answer
         if r[2] == r[3]:
@@ -276,6 +268,25 @@ def generate_csrf_token():
 
 
 app.jinja_env.globals['csrf_token'] = generate_csrf_token
+
+
+@app.route('/users/my_page')
+def show_my_page():
+    exams = get_exam_list()
+    return render_template('my_page.html', exams=exams)
+
+
+def get_exam_list():
+    exams = []
+    db = get_db()
+
+    exams_object = db.cursor().execute('SELECT exam_id, exam_name FROM exam')
+    
+    for exam in exams_object.fetchall():
+        # [(exam_id, exam_name), ...]
+        exams.append(tuple(exam))
+
+    return exams
 
 
 if __name__ == '__main__':
