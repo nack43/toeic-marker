@@ -48,12 +48,9 @@ def sign_up():
 
     elif request.method == 'POST':
         try:
-            print('POSTきたー')
             db = get_db()
 
             user = db.cursor().execute('SELECT email_address FROM user WHERE email_address=?', (request.form['email_address'],))
-            
-            #print(user.fetchone())
 
             if user is not None:
                 # password hashing
@@ -130,28 +127,20 @@ def index():
 
 
 @app.route('/exam/answer_form', methods=['POST'])
-def show_exam_form():
-    db = get_db()
-    session['exam_id'] = request.form['exam_id']
-
+def show_answer_form():
+    
     problems = []
-    # part1 to 7
-    for i in range(1, 8):
-        rv = db.cursor().execute('SELECT part_id, problem_id FROM problem WHERE exam_id=? AND part_id=?;',
-            (
-                session['exam_id'],
-                i
-            ))
+    session['exam_id'] = request.form['exam_id']
+    
+    db = get_db()
 
-        for r in rv:
-            # (part_id, problem_id)
-            tmp = (r[0], r[1])
-            # [(part_id, problem_id), ...]
-            problems.append(tmp)
+    problems_object = db.cursor().execute('SELECT part_id, problem_id FROM problem WHERE exam_id=?', (session['exam_id'],))
+
+    for problem in problems_object.fetchall():
+        # [(part_id, problem_id), ...]
+        problems.append((tuple(problem)))
 
     db.close()
-
-    print(session['exam_id'])
 
     return render_template('answer_form.html', problems=problems, exam_id=session['exam_id'])
 
@@ -267,9 +256,6 @@ def generate_csrf_token():
     return session['_csrf_token']
 
 
-app.jinja_env.globals['csrf_token'] = generate_csrf_token
-
-
 @app.route('/users/my_page')
 def show_my_page():
     exams = get_exam_list()
@@ -290,5 +276,6 @@ def get_exam_list():
 
 
 if __name__ == '__main__':
+    app.jinja_env.globals['csrf_token'] = generate_csrf_token
     app.run(debug=True)
 

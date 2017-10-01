@@ -2,7 +2,7 @@
 <html>
   <body>
     <p>My Page</p>
-    <form action="{{ url_for('show_exam_form') }}" method='POST'>
+    <form action="{{ url_for('show_answer_form') }}" method='POST'>
       <select name=exam_id>
         {% for exam in exams %}
         <option value="{{exam[0]}}">{{exam[1]}}</option>
