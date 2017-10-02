@@ -3,6 +3,7 @@ import os
 import sqlite3
 import bcrypt
 from datetime import datetime
+import sys
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -42,7 +43,7 @@ def close_db(error):
 
 @app.route('/users/sign_up', methods=['GET', 'POST'])
 def sign_up():
-
+    print(sys._getframe().f_code.co_name)
     if request.method == 'GET':
         return render_template('sign_up.html')
 
@@ -79,7 +80,7 @@ def sign_up():
 
 @app.route('/users/sign_in', methods=['GET', 'POST'])
 def sign_in():
-
+    print(sys._getframe().f_code.co_name)
     if request.method == 'GET':
         return render_template('sign_in.html')
 
@@ -93,8 +94,6 @@ def sign_in():
             (
                 request.form['email_address'],
             ))
-
-        db.close()
 
         if user is not None:
             user_data = tuple(user.fetchone())
@@ -113,10 +112,10 @@ def sign_in():
 
         else:
             return 'There is no user like that'
-
+        db.close()
     if is_auth:
         # TODO: redirect mypage
-        return redirect(url_for('answer_form', exam_id=1))
+        return redirect(url_for('show_my_page'))
     else:
         return 'Login failed'        
 
@@ -128,7 +127,7 @@ def index():
 
 @app.route('/exam/answer_form', methods=['POST'])
 def show_answer_form():
-    
+    print(sys._getframe().f_code.co_name)
     problems = []
     session['exam_id'] = request.form['exam_id']
     
@@ -138,20 +137,18 @@ def show_answer_form():
 
     for problem in problems_object.fetchall():
         # [(part_id, problem_id), ...]
-        problems.append((tuple(problem)))
+        problems.append(tuple(problem))
 
     db.close()
 
     return render_template('answer_form.html', problems=problems, exam_id=session['exam_id'])
 
 
-@app.route('/save_user_answer', methods=['GET', 'POST'])
-def save_user_answer():
+def save_user_answer(answers):
 
-    # check request is legal or not
-    #if session['csrf_hash'] == request.form['csrf_hash']:
-     #   session.pop('csrf_hash', None)
-
+    print(sys._getframe().f_code.co_name)
+    print(answers)
+    
     try:
         db = get_db()
 
@@ -168,18 +165,18 @@ def save_user_answer():
         lastrowid = cur.lastrowid
 
         # iterate 1 to 200 for problem counts
-        for i in range(1,201):
+        for idx, answer in enumerate(answers):
             cur.execute('INSERT INTO user_answer(exam_date_id, problem_id, user_answer) VALUES (?, ?, ?)', 
                 (
-                    lastrowid,            # exam_date_id
-                    i,                    # problem_id
-                    request.form[str(i)]  # user_answer
+                    lastrowid,   # exam_date_id
+                    idx + 1,     # problem_id
+                    answer       # user_answer
                 ))
 
         db.commit()
         db.close()
 
-        return redirect(url_for('show_result', lastrowid=lastrowid))
+        return lastrowid
 
     except sqlite3.Error as e:
         print(e) # エラー
@@ -187,8 +184,19 @@ def save_user_answer():
         db.close()
 
 
-@app.route('/result/<int:lastrowid>')
-def show_result(lastrowid):
+@app.route('/exam/result', methods=['POST'])
+def show_result():
+    # save and get lastrowid
+
+    print(sys._getframe().f_code.co_name)
+
+    answers = []
+
+    for i in range(1, 200):
+        answers.append(request.form[str(i)])
+
+    last_row_id = save_user_answer(answers)
+    
     t_corrects = 0
     p_corrects = {}
     p_counts = {}
@@ -240,16 +248,23 @@ def logout():
 
 @app.before_request
 def csrf_protect():
+    print(request.method)
 
+    print(sys._getframe().f_code.co_name)
     if request.method == 'POST':
         token = session.pop('_csrf_token', None)
 
+        print(request.form.get('_csrf_token'))
+        print(token)
+
         if not token or token != request.form.get('_csrf_token'):
+            return '不正'
             abort(403)
 
 
 def generate_csrf_token():
 
+    print(sys._getframe().f_code.co_name)
     if '_csrf_token' not in session:
         session['_csrf_token'] = str(os.urandom(24))
 
@@ -258,11 +273,13 @@ def generate_csrf_token():
 
 @app.route('/users/my_page')
 def show_my_page():
+    print(sys._getframe().f_code.co_name)
     exams = get_exam_list()
     return render_template('my_page.html', exams=exams)
 
 
 def get_exam_list():
+    print(sys._getframe().f_code.co_name)
     exams = []
     db = get_db()
 
