@@ -144,15 +144,12 @@ def show_answer_form():
     return render_template('answer_form.html', problems=problems, exam_id=session['exam_id'])
 
 
-def save_user_answer(answers):
+def insert_user_answer(answers):
 
-    print(sys._getframe().f_code.co_name)
-    print(answers)
-    
     try:
         db = get_db()
-
         cur = db.cursor()
+
         cur.execute('BEGIN;')
         cur.execute('INSERT INTO exam_date(exam_id, user_id, exam_date) VALUES (?, ?, ?);', 
             (
@@ -164,7 +161,7 @@ def save_user_answer(answers):
 
         lastrowid = cur.lastrowid
 
-        # iterate 1 to 200 for problem counts
+        # insert user answer
         for idx, answer in enumerate(answers):
             cur.execute('INSERT INTO user_answer(exam_date_id, problem_id, user_answer) VALUES (?, ?, ?)', 
                 (
@@ -194,50 +191,52 @@ def show_result():
 
     for i in range(1, 200):
         answers.append(request.form[str(i)])
-
-    last_row_id = save_user_answer(answers)
     
-    t_corrects = 0
-    p_corrects = {}
-    p_counts = {}
-    t_ratio = 0
-    p_ratio = {}        # float
-    wrong_problems = [] # int
+    # TODO: naming...
+    last_row_id = insert_user_answer(answers)
+    
+    total_correct_counts = 0
+    part_correct_counts = {}
+    part_problem_nums = {}
+    total_ratio = 0
+    part_ratio = {}        # float
+    wrong_problem_ids = [] # int
 
     db = get_db()
     cur = db.cursor()
 
-    rv = cur.execute('SELECT ua.problem_id, p.part_id, ua.user_answer, p.correct_answer FROM user_answer ua INNER JOIN exam_date ed ON ua.exam_date_id = ed.exam_date_id INNER JOIN problem p ON p.problem_id = ua.problem_id AND p.exam_id = ed.exam_id WHERE ua.exam_date_id = ?;', (lastrowid,))
+    problems = cur.execute('SELECT ua.problem_id, p.part_id, ua.user_answer, p.correct_answer FROM user_answer ua INNER JOIN exam_date ed ON ua.exam_date_id = ed.exam_date_id INNER JOIN problem p ON p.problem_id = ua.problem_id AND p.exam_id = ed.exam_id WHERE ua.exam_date_id = ?;', (lastrowid,))
 
-    for r in rv:
+    for problem in problems:
         # comparing user answer and correct answer
-        if r[2] == r[3]:
-            t_corrects += 1
+        if problem[2] == problem[3]:
+            total_correct_counts += 1
 
             # counting correct answer for each part
-            if r[1] in p_corrects.keys():
-                p_corrects[r[1]] += 1
+            if problem[1] in part_correct_counts.keys():
+                part_correct_counts[problem[1]] += 1
             else:
-                p_corrects[r[1]] = 1
+                part_correct_counts[problem[1]] = 1
         else:
             # listing wrong problems
-            wrong_problems.append(r[0])
+            wrong_problem_ids.append(problem[0])
 
         # counting number of part of problems
-        if r[1] in p_counts.keys():
-            p_counts[r[1]] += 1
+        if problem[1] in part_problem_nums.keys():
+            part_problem_nums[problem[1]] += 1
         else:
-            p_counts[r[1]] = 1
+            part_problem_nums[problem[1]] = 1
 
-    t_ratio = t_corrects / 200 * 100
+    total_ratio = total_correct_counts / 200 * 100
 
-    tmp_count = 0
-    for correct, count in zip(p_corrects.items(), p_counts.items()):
-        tmp_count += 1
-        p_ratio[tmp_count] = round(correct[1] / count[1], 2) * 100
+    part = 0
+    for correct, count in zip(part_correct_counts.items(), part_problem_nums.items()):
+        part += 1
+        part_ratio[part] = round(correct[1] / count[1], 2) * 100
 
     db.close()
-    return render_template('result.html', t_ratio=t_ratio, p_ratio=p_ratio, wrong_problems=wrong_problems)
+
+    return render_template('result.html', total_ratio=total_ratio, part_ratio=part_ratio, wrong_problem_ids=wrong_problem_ids)
 
 
 @app.route('/logout')
@@ -248,23 +247,15 @@ def logout():
 
 @app.before_request
 def csrf_protect():
-    print(request.method)
-
     print(sys._getframe().f_code.co_name)
     if request.method == 'POST':
         token = session.pop('_csrf_token', None)
 
-        print(request.form.get('_csrf_token'))
-        print(token)
-
         if not token or token != request.form.get('_csrf_token'):
-            return '不正'
             abort(403)
 
 
 def generate_csrf_token():
-
-    print(sys._getframe().f_code.co_name)
     if '_csrf_token' not in session:
         session['_csrf_token'] = str(os.urandom(24))
 
@@ -273,13 +264,11 @@ def generate_csrf_token():
 
 @app.route('/users/my_page')
 def show_my_page():
-    print(sys._getframe().f_code.co_name)
     exams = get_exam_list()
     return render_template('my_page.html', exams=exams)
 
 
 def get_exam_list():
-    print(sys._getframe().f_code.co_name)
     exams = []
     db = get_db()
 
