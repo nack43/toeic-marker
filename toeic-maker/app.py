@@ -140,11 +140,15 @@ def show_answer_form():
         problems.append(tuple(problem))
 
     db.close()
-
     return render_template('answer_form.html', problems=problems, exam_id=session['exam_id'])
 
 
-def insert_user_answer(answers):
+@app.route('/insert_user_answer', methods=['POST'])
+def insert_user_answer():
+
+    answers = []
+    for i in range(1, 201):
+        answers.append(request.form[str(i)])
 
     try:
         db = get_db()
@@ -171,46 +175,39 @@ def insert_user_answer(answers):
                 ))
 
         db.commit()
-        db.close()
-
-        return lastrowid
+        #db.close()
+        
+        total_ratio, part_ratio, wrong_problem_ids = caculate_answer_ratio(lastrowid)
+        return render_template('result.html', total_ratio=total_ratio, part_ratio=part_ratio, wrong_problem_ids=wrong_problem_ids)
 
     except sqlite3.Error as e:
-        print(e) # エラー
+        print(e)
         db.rollback()
         db.close()
+        return
 
 
-@app.route('/exam/result', methods=['POST'])
-def show_result():
-    # save and get lastrowid
-
+def caculate_answer_ratio(lastrowid):
     print(sys._getframe().f_code.co_name)
 
-    answers = []
+    print(lastrowid)
 
-    for i in range(1, 200):
-        answers.append(request.form[str(i)])
-    
-    # TODO: naming...
-    last_row_id = insert_user_answer(answers)
-    
-    total_correct_counts = 0
+    total_correct_count = 0
     part_correct_counts = {}
-    part_problem_nums = {}
+    part_problem_counts = {}
     total_ratio = 0
     part_ratio = {}        # float
     wrong_problem_ids = [] # int
 
     db = get_db()
-    cur = db.cursor()
-
-    problems = cur.execute('SELECT ua.problem_id, p.part_id, ua.user_answer, p.correct_answer FROM user_answer ua INNER JOIN exam_date ed ON ua.exam_date_id = ed.exam_date_id INNER JOIN problem p ON p.problem_id = ua.problem_id AND p.exam_id = ed.exam_id WHERE ua.exam_date_id = ?;', (lastrowid,))
+    #cur = db.cursor()
+    
+    problems = db.cursor().execute('SELECT ua.problem_id, p.part_id, ua.user_answer, p.correct_answer FROM user_answer ua INNER JOIN exam_date ed ON ua.exam_date_id = ed.exam_date_id INNER JOIN problem p ON p.problem_id = ua.problem_id AND p.exam_id = ed.exam_id WHERE ua.exam_date_id = ?;', (lastrowid,))
 
     for problem in problems:
         # comparing user answer and correct answer
         if problem[2] == problem[3]:
-            total_correct_counts += 1
+            total_correct_count += 1
 
             # counting correct answer for each part
             if problem[1] in part_correct_counts.keys():
@@ -222,21 +219,19 @@ def show_result():
             wrong_problem_ids.append(problem[0])
 
         # counting number of part of problems
-        if problem[1] in part_problem_nums.keys():
-            part_problem_nums[problem[1]] += 1
+        if problem[1] in part_problem_counts.keys():
+            part_problem_counts[problem[1]] += 1
         else:
-            part_problem_nums[problem[1]] = 1
+            part_problem_counts[problem[1]] = 1
 
-    total_ratio = total_correct_counts / 200 * 100
+    total_ratio = total_correct_count / 200 * 100
 
     part = 0
-    for correct, count in zip(part_correct_counts.items(), part_problem_nums.items()):
+    for correct, count in zip(part_correct_counts.items(), part_problem_counts.items()):
         part += 1
         part_ratio[part] = round(correct[1] / count[1], 2) * 100
 
-    db.close()
-
-    return render_template('result.html', total_ratio=total_ratio, part_ratio=part_ratio, wrong_problem_ids=wrong_problem_ids)
+    return total_ratio, part_ratio, wrong_problem_ids
 
 
 @app.route('/logout')
