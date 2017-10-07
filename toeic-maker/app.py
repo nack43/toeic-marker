@@ -163,19 +163,21 @@ def insert_user_answer():
                 datetime.now().strftime('%Y%m%d%H%M%S')
              ))
 
-        lastrowid = cur.lastrowid
+        exam_date_id = cur.lastrowid
 
         # insert user answer
         for idx, answer in enumerate(answers):
             cur.execute('INSERT INTO user_answer(exam_date_id, problem_id, user_answer) VALUES (?, ?, ?)', 
                 (
-                    lastrowid,   # exam_date_id
+                    exam_date_id,   # exam_date_id
                     idx + 1,     # problem_id
                     answer       # user_answer
                 ))
 
         db.commit()
         #db.close()
+        
+        wrong_proglem_ids = mark_user_answer(exam_date_id)
         
         total_ratio, part_ratio, wrong_problem_ids = caculate_answer_ratio(lastrowid)
         return render_template('result.html', total_ratio=total_ratio, part_ratio=part_ratio, wrong_problem_ids=wrong_problem_ids)
@@ -185,6 +187,41 @@ def insert_user_answer():
         db.rollback()
         db.close()
         return
+
+
+def mark_user_answer(exam_date_id):
+    print(sys._getframe().f_code.co_name)
+    wrong_problem_ids = []
+    is_correct = ''
+    sql = """
+            SELECT ua.problem_id, ua.user_answer, p.correct_answer 
+            FROM user_answer ua 
+            INNER JOIN exam_date ed ON ua.exam_date_id = ed.exam_date_id 
+            INNER JOIN problem p ON p.exam_id = ed.exam_id AND p.problem_id = ua.problem_id 
+            WHERE ed.exam_date_id = ?
+        """
+
+    db = get_db()
+
+    problem_answers = db.cursor().execute(sql, (exam_date_id,))
+
+    for problem_answer in problem_answers:
+        if problem_answer[1] == problem_answer[2]:
+            is_correct = 'T'
+        else:
+            is_correct = 'F'
+            wrong_problem_ids.append(problem_answer[0])
+
+        db.cursor().execute('UPDATE user_answer SET is_correct = ? WHERE exam_date_id = ? AND problem_id = ?',
+            (
+                is_correct,
+                exam_date_id,
+                problem_answer[0]
+            ))
+
+    db.commit()
+
+    return wrong_problem_ids
 
 
 def caculate_answer_ratio(lastrowid):
@@ -201,8 +238,14 @@ def caculate_answer_ratio(lastrowid):
 
     db = get_db()
     #cur = db.cursor()
-    
-    problems = db.cursor().execute('SELECT ua.problem_id, p.part_id, ua.user_answer, p.correct_answer FROM user_answer ua INNER JOIN exam_date ed ON ua.exam_date_id = ed.exam_date_id INNER JOIN problem p ON p.problem_id = ua.problem_id AND p.exam_id = ed.exam_id WHERE ua.exam_date_id = ?;', (lastrowid,))
+    sql = """
+            SELECT ua.problem_id, p.part_id, ua.user_answer, p.correct_answer 
+            FROM user_answer ua 
+            INNER JOIN exam_date ed ON ua.exam_date_id = ed.exam_date_id 
+            INNER JOIN problem p ON p.problem_id = ua.problem_id AND p.exam_id = ed.exam_id 
+            WHERE ua.exam_date_id = ?
+        """
+    problems = db.cursor().execute(sql, (lastrowid,))
 
     for problem in problems:
         # comparing user answer and correct answer
