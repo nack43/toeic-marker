@@ -120,11 +120,6 @@ def sign_in():
         return 'Login failed'        
 
 
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-
 @app.route('/exam/answer_form', methods=['POST'])
 def show_answer_form():
     print(sys._getframe().f_code.co_name)
@@ -177,10 +172,15 @@ def insert_user_answer():
         db.commit()
         #db.close()
         
-        wrong_proglem_ids = mark_user_answer(exam_date_id)
+        wrong_problem_ids = mark_user_answer(exam_date_id)
         
-        total_ratio, part_ratio, wrong_problem_ids = caculate_answer_ratio(lastrowid)
-        return render_template('result.html', total_ratio=total_ratio, part_ratio=part_ratio, wrong_problem_ids=wrong_problem_ids)
+        total_ratio, part_ratios = caculate_answer_ratio(exam_date_id)
+
+        insert_ratios(total_ratio, part_ratios, exam_date_id)
+
+        db.close()
+        return render_template('result.html', total_ratio=total_ratio, part_ratios=part_ratios, wrong_problem_ids=wrong_problem_ids)
+
 
     except sqlite3.Error as e:
         print(e)
@@ -188,9 +188,20 @@ def insert_user_answer():
         db.close()
         return
 
+def insert_ratios(total_ratio, part_ratios, exam_date_id):
+
+    db = get_db()
+
+    db.cursor().execute('INSERT INTO total_answer_ratio(exam_date_id, total_ratio) VALUES (?, ?)', (exam_date_id, total_ratio))
+
+    for part_id, part_ratio in part_ratios.items():
+        db.cursor().execute('INSERT INTO part_answer_ratio(exam_date_id, part_id, part_ratio) VALUES (?, ?, ?)', (exam_date_id, part_id, part_ratio))
+
+    db.commit()
+
 
 def mark_user_answer(exam_date_id):
-    print(sys._getframe().f_code.co_name)
+
     wrong_problem_ids = []
     is_correct = ''
     sql = """
@@ -206,17 +217,18 @@ def mark_user_answer(exam_date_id):
     problem_answers = db.cursor().execute(sql, (exam_date_id,))
 
     for problem_answer in problem_answers:
-        if problem_answer[1] == problem_answer[2]:
+        problem_id, user_answer, correct_answer = tuple(problem_answer)
+        if user_answer == correct_answer:
             is_correct = 'T'
         else:
             is_correct = 'F'
-            wrong_problem_ids.append(problem_answer[0])
+            wrong_problem_ids.append(problem_id)
 
         db.cursor().execute('UPDATE user_answer SET is_correct = ? WHERE exam_date_id = ? AND problem_id = ?',
             (
                 is_correct,
                 exam_date_id,
-                problem_answer[0]
+                problem_id
             ))
 
     db.commit()
@@ -224,57 +236,57 @@ def mark_user_answer(exam_date_id):
     return wrong_problem_ids
 
 
-def caculate_answer_ratio(lastrowid):
+# return ratio (total, part) and insert into database
+def caculate_answer_ratio(exam_date_id):
     print(sys._getframe().f_code.co_name)
 
-    print(lastrowid)
-
-    total_correct_count = 0
-    part_correct_counts = {}
-    part_problem_counts = {}
-    total_ratio = 0
-    part_ratio = {}        # float
-    wrong_problem_ids = [] # int
+    total_correct_count = 0  # cur.count by counting exam_date_id T
+    part_correct_counts = {} # cur.count by counting part_id T
+    part_problem_counts = {} # cur.count by counting same part_id
+    total_ratio = 0          # total_correct_count / 200 * 100
+    part_ratios = {}          # part_correct_counts / part_problem_counts * 100
 
     db = get_db()
-    #cur = db.cursor()
+
+    # select problem_id, part_id, use_answer, is_correct from ...
+
+    correct_answer_objects = db.cursor().execute('SELECT problem_id FROM user_answer WHERE exam_date_id = ? AND is_correct = "T"', (exam_date_id,))
+    total_correct_count = len(correct_answer_objects.fetchall())
+    total_ratio = total_correct_count / 200 * 100
+
     sql = """
-            SELECT ua.problem_id, p.part_id, ua.user_answer, p.correct_answer 
+            SELECT ua.problem_id, p.part_id, ua.is_correct 
             FROM user_answer ua 
             INNER JOIN exam_date ed ON ua.exam_date_id = ed.exam_date_id 
             INNER JOIN problem p ON p.problem_id = ua.problem_id AND p.exam_id = ed.exam_id 
             WHERE ua.exam_date_id = ?
         """
-    problems = db.cursor().execute(sql, (lastrowid,))
+
+    problems = db.cursor().execute(sql, (exam_date_id,))
 
     for problem in problems:
-        # comparing user answer and correct answer
-        if problem[2] == problem[3]:
-            total_correct_count += 1
+        problem_id, part_id, is_correct = tuple(problem)
 
-            # counting correct answer for each part
-            if problem[1] in part_correct_counts.keys():
-                part_correct_counts[problem[1]] += 1
+        # couting problems by parts
+        if part_id in part_problem_counts.keys():
+            part_problem_counts[part_id] += 1
+        else:
+            part_problem_counts[part_id] = 1
+        
+        # counting corrects by parts
+        if is_correct == 'T':
+            if part_id in part_correct_counts.keys():
+                part_correct_counts[part_id] += 1
             else:
-                part_correct_counts[problem[1]] = 1
-        else:
-            # listing wrong problems
-            wrong_problem_ids.append(problem[0])
+                part_correct_counts[part_id] = 1
 
-        # counting number of part of problems
-        if problem[1] in part_problem_counts.keys():
-            part_problem_counts[problem[1]] += 1
-        else:
-            part_problem_counts[problem[1]] = 1
-
-    total_ratio = total_correct_count / 200 * 100
-
+    # caculate ratio by parts
     part = 0
-    for correct, count in zip(part_correct_counts.items(), part_problem_counts.items()):
+    for correct, count in zip(part_correct_counts.values(), part_problem_counts.values()):
         part += 1
-        part_ratio[part] = round(correct[1] / count[1], 2) * 100
+        part_ratios[part] = round(correct / count * 100, 2)
 
-    return total_ratio, part_ratio, wrong_problem_ids
+    return total_ratio, part_ratios
 
 
 @app.route('/logout')
@@ -315,6 +327,8 @@ def get_exam_list():
     for exam in exams_object.fetchall():
         # [(exam_id, exam_name), ...]
         exams.append(tuple(exam))
+
+    db.close()
 
     return exams
 

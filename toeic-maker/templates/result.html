@@ -5,8 +5,8 @@
   </head>
   <body>
     <p>全体正答率: {{total_ratio}}</p>
-    {% for k, v in part_ratio.items() %}
-    <p>パート{{k}}: {{v}}%</p>
+    {% for part_id, part_ratio in part_ratios.items() %}
+    <p>パート{{part_id}}: {{part_ratio}}%</p>
     {% endfor %}
     <p>間違った問題(リスト): {{wrong_problem_ids}}</p>
   </body>
