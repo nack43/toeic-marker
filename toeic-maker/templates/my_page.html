@@ -1,15 +1,65 @@
 <!DOCTYPE html>
 <html>
+<head>
+<title>HTML5, CSS3 and JavaScript demo</title>
+<link rel=stylesheet type=text/css href="../static/my_page.css">
+</head>
   <body>
-    <p>My Page</p>
-    <form action="{{ url_for('show_answer_form') }}" method='POST'>
-      <select name=exam_id>
-        {% for exam in exams %}
-        <option value="{{exam[0]}}">{{exam[1]}}</option>
-        {% endfor %}
-      </select>
-      <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-      <input type="submit" value='Submit'>
-    </form>
+    <div id="box">
+      <b>TOEIC-Marker</b>
+      <div class="navigation-bar">
+        <a><b>My page</b></a>
+      <div id="dropdown">
+        
+        <span style="padding-right: 5px;"><b>Take Exams</b><div class="arrow"></div></span>
+        <div class="dropdown-content">
+          <p>AAA</p>
+          <p>BBB</p>
+          <p>CCC</p>
+        </div>
+      </div>
+        <a><b>Sign out</b></a>
+      </div>
+    </div>
+    
+    <div id="main-box">
+      <div id="profile-box">
+      <h2>Profile</h2>
+        <div class="profile-edit-box">
+          <div class="profile-left-box">
+          <form>
+            <input type="text" placeholder="E-mail address">
+            <input type="text" placeholder="The latest score">
+            <input type="text" placeholder="Total xxx/990">
+            <input type="text" placeholder="Listening xxx/450">
+            <input type="text" placeholder="Writing xxx/450">
+          </form>
+          </div>
+          <div class="profile-right-box">
+            <input type="text" placeholder="Target Score xxx/990">
+            <input type="text" placeholder="Next Exam Date xxx/990">
+          </div>
+        </div>
+      </div>
+
+      <div id="graph-box">
+      <h2>Score Report</h2>
+        <div class="graph-edit-box">
+          <div class="graph-left-box">
+          <form>
+            <input type="text" placeholder="E-mail address">
+            <input type="text" placeholder="The latest score">
+            <input type="text" placeholder="Total xxx/990">
+            <input type="text" placeholder="Listening xxx/450">
+            <input type="text" placeholder="Writing xxx/450">
+          </form>
+          </div>
+          <div class="graph-right-box">
+            <input type="text" placeholder="Target Score xxx/990">
+            <input type="text" placeholder="Next Exam Date xxx/990">
+          </div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>

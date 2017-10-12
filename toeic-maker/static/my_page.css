@@ -1,0 +1,150 @@
+#box {
+  position: fixed;
+  width: 99%;
+  height: 50px;
+  font-size: 25px;
+  padding-top: 7px;
+  padding-left: 10px;
+}
+
+.navigation-bar {
+  position: absolute;
+  margin: 0;
+  top: 0;
+  right: 0;
+  width: auto;
+  float: right;
+  padding-top: 7px;
+  margin-right: 10px;
+}
+
+.navigation-bar a {
+  padding-right: 30px;
+  margin-left: 30px;
+}
+
+#dropdown {
+  display: inline-block;
+  position: relative;
+}
+
+.dropdown-content {
+  opacity: 0;
+  position: absolute;
+  min-width: 160px;
+  z-index: 1;
+  box-shadow: 1px 1px 5px #000000;
+  -webkit-transition: all 0.3s ease-in;
+  -moz-transition: all 0.3s ease-in;
+  -o-transition: all 0.3s ease-in;
+  -ms-transition: all 0.3s ease-in;
+  transition: all 0.3s ease-in;
+}
+
+#dropdown:hover .dropdown-content {
+  opacity: 1;
+  -webkit-transition: all 0.3s ease-in;
+  -moz-transition: all 0.3s ease-in;
+  -o-transition: all 0.3s ease-in;
+  -ms-transition: all 0.3s ease-in;
+  transition: all 0.3s ease-in;
+}
+
+#dropdown:hover .arrow {
+  transform: rotate(180deg);
+}
+
+p {
+  margin: 0;
+}
+
+.dropdown-content p:hover {
+  background: red;
+}
+
+.arrow {
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 8px solid black;
+  float: right;
+  margin-top: 15px;
+}
+
+#main-box {
+  position: fixed;
+  margin-top: 3%;
+  width: 90%;
+  height: 83%;
+  left: 2.5%;
+  padding: 20px 20px;
+}
+
+
+#profile-box {
+  position: relative;
+  width: 100%;
+  height: 50%;
+  padding-top: 0;
+}
+
+#profile-box h2 {
+  margin: 0;
+}
+
+#profile-box input {
+  display: block;
+  margin: 20px;
+}
+
+.profile-edit-box {
+  display: flex;
+  padding: 10px;
+}
+
+.profile-left-box {
+  background-color: blue;
+  width: 50%;
+}
+
+.profile-right-box {
+  background-color: red;
+  width: 50%;
+  
+}
+
+
+#graph-box {
+  position: relative;
+  width: 100%;
+  height: 50%;
+  padding-top: 0;
+}
+
+#graph-box h2 {
+  margin: 0;
+}
+
+#graph-box input {
+  display: block;
+  margin: 20px;
+}
+
+.graph-edit-box {
+  display: flex;
+  padding: 10px;
+}
+
+.graph-left-box {
+  background-color: blue;
+  width: 50%;
+}
+
+.graph-right-box {
+  background-color: yellow;
+  width: 50%;
+  
+}
+
+

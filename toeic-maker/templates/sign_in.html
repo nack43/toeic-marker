@@ -1,12 +1,24 @@
 <!DOCTYPE html>
 <html>
-  <body>
-    <p>Sign INやで</p>
+<head>
+<title>Sign in</title>
+<link rel=stylesheet type=text/css href="{{ url_for('static', filename='sign_up.css') }}">
+</head>
+<body>
+  <div id="main">
+    <center><b>Sign in for TOEIC-Marker</b></center>
+    <div class="box">
     <form action="{{ url_for('sign_in') }}" method='POST'>
       <input type="hidden" name="_csrf_token" value="{{ csrf_token() }}">
-      <p><input name="email_address" placeholder="EMAIL ADDRESS"></p>
-      <p><input name="password" placeholder="PASSWORD"></p>
-      <input type="submit" value='Sign in'>
+      <label class="label"><b>E-mail address</b></label><br>
+      <input type="text" placeholder="Email address" name="email_address"/><br>
+      <label class="label"><b>Password</b></label><br>
+      <input type="text" placeholder="Password" name="password"/><br>
+      <label><input type="checkbox" id="cbox1" value="first_checkbox">Remember me</label><br>
+      <input type="submit" value="Sign in"/>
     </form>
-  </body>
+      <div style="margin-left: 0; margin-top: 15%; position: absolute; ">Sign up <a href="{{ url_for('sign_up') }}">here</a></div>
+    </div>
+  </div>
+</body>
 </html>

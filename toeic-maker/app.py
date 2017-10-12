@@ -188,6 +188,7 @@ def insert_user_answer():
         db.close()
         return
 
+
 def insert_ratios(total_ratio, part_ratios, exam_date_id):
 
     db = get_db()
