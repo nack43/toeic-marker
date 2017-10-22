@@ -172,14 +172,14 @@ def insert_user_answer():
         db.commit()
         #db.close()
         
-        wrong_problem_ids = mark_user_answer(exam_date_id)
+        session['wrong_problem_ids'] = mark_user_answer(exam_date_id)
         
-        total_ratio, part_ratios = caculate_answer_ratio(exam_date_id)
+        session['total_ratio'], session['part_ratios'] = caculate_answer_ratio(exam_date_id)
 
         insert_ratios(total_ratio, part_ratios, exam_date_id)
 
         db.close()
-        return render_template('result.html', total_ratio=total_ratio, part_ratios=part_ratios, wrong_problem_ids=wrong_problem_ids)
+        return redirect(url_for('show_result'))
 
 
     except sqlite3.Error as e:
@@ -288,6 +288,10 @@ def caculate_answer_ratio(exam_date_id):
         part_ratios[part] = round(correct / count * 100, 2)
 
     return total_ratio, part_ratios
+
+@app.route('/exam/result')
+def show_result():
+    render_template('result.html', total_ratio=session['total_ratio'], part_ratios=session['part_ratios'], wrong_problem_ids=session['wrong_proglem_ids'])
 
 
 @app.route('/logout')
